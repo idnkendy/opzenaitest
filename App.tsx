@@ -35,6 +35,7 @@ import Spinner from './components/Spinner';
 import PublicPricing from './components/PublicPricing';
 import { getUserStatus, deductCredits } from './services/paymentService';
 import * as jobService from './services/jobService';
+import { plans } from './constants/plans';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'homepage' | 'auth' | 'app' | 'pricing' | 'payment'>('homepage');
@@ -73,6 +74,31 @@ const App: React.FC = () => {
     root.classList.add(theme);
   }, [theme]);
 
+  // Routing: Handle browser back/forward buttons
+  useEffect(() => {
+      const handlePopState = () => {
+          const path = window.location.pathname;
+          if (path === '/payment') {
+               const params = new URLSearchParams(window.location.search);
+               const planId = params.get('plan');
+               const plan = plans.find(p => p.id === planId);
+               if (plan && session) {
+                   setSelectedPlan(plan);
+                   setView('payment');
+               } else if (session) {
+                   setView('app');
+               } else {
+                   setView('homepage');
+               }
+          } else if (path === '/') {
+              setView(session ? 'app' : 'homepage');
+          }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+  }, [session]);
+
   // Logic xác thực quan trọng: Xử lý OAuth redirect và session persistence
   useEffect(() => {
     const initSession = async () => {
@@ -82,8 +108,23 @@ const App: React.FC = () => {
         
         if (initialSession) {
             setSession(initialSession);
-            // Force view to 'app' if session exists, fixing white screen on redirect
-            setView('app'); 
+            
+            // Check URL for routing logic on initial load
+            const path = window.location.pathname;
+            if (path === '/payment') {
+                const params = new URLSearchParams(window.location.search);
+                const planId = params.get('plan');
+                const plan = plans.find(p => p.id === planId);
+                if (plan) {
+                    setSelectedPlan(plan);
+                    setView('payment');
+                } else {
+                    setView('app'); // Fallback if invalid plan
+                }
+            } else {
+                // Force view to 'app' if session exists and not on specific route
+                if (view !== 'app') setView('app');
+            }
         }
         setLoadingSession(false);
     };
@@ -94,7 +135,21 @@ const App: React.FC = () => {
       setSession(session);
       if (session) {
           // If we just got a session and we were loading or on auth, go to app
-          if (view === 'auth' || view === 'homepage') setView('app');
+          if (view === 'auth' || view === 'homepage') {
+              // Re-check path in case of auth redirect back to /payment
+              const path = window.location.pathname;
+              if (path === '/payment') {
+                  const params = new URLSearchParams(window.location.search);
+                  const planId = params.get('plan');
+                  const plan = plans.find(p => p.id === planId);
+                  if (plan) {
+                      setSelectedPlan(plan);
+                      setView('payment');
+                      return;
+                  }
+              }
+              setView('app');
+          }
       }
       setLoadingSession(false);
     });
@@ -140,6 +195,7 @@ const App: React.FC = () => {
   const handleStartDesigning = () => {
     if (session) {
         setView('app');
+        window.history.pushState({}, '', '/');
     } else {
         handleAuthNavigate('login');
     }
@@ -150,6 +206,7 @@ const App: React.FC = () => {
       setActiveTool(tool);
       if (session) {
           setView('app');
+          window.history.pushState({}, '', '/');
       } else {
           handleAuthNavigate('login');
       }
@@ -159,16 +216,19 @@ const App: React.FC = () => {
     await supabase.auth.signOut();
     setView('homepage');
     setSession(null);
+    window.history.pushState({}, '', '/');
   };
   
   const handleGoHome = () => {
     setView('homepage');
+    window.history.pushState({}, '', '/');
   }
 
   const handleOpenGallery = () => {
       if (session) {
           setView('app');
           setActiveTool(Tool.History);
+          window.history.pushState({}, '', '/');
       }
   }
 
@@ -190,6 +250,7 @@ const App: React.FC = () => {
           setView('app');
           // Points to the dedicated Checkout page
           setActiveTool(Tool.Pricing);
+          window.history.pushState({}, '', '/');
       } else {
           // If not logged in, go to public pricing page
           setView('pricing');
@@ -201,18 +262,28 @@ const App: React.FC = () => {
           setView('app');
           setActiveTool(Tool.Profile);
           handleToolStateChange(Tool.Profile, { activeTab: 'profile' });
+          window.history.pushState({}, '', '/');
       }
   }
 
   const handleSelectPlanForPayment = (plan: PricingPlan) => {
       setSelectedPlan(plan);
       setView('payment');
+      // Push state to history so URL updates to /payment?plan=...
+      window.history.pushState({}, '', `/payment?plan=${plan.id}`);
   };
+
+  const handlePaymentBack = () => {
+      setView('app');
+      setActiveTool(Tool.Pricing); // Go back to pricing list
+      window.history.pushState({}, '', '/');
+  }
 
   const handlePaymentSuccess = () => {
       fetchUserStatus();
       setView('app');
       setActiveTool(Tool.ArchitecturalRendering); // Or back to Profile
+      window.history.pushState({}, '', '/');
   };
 
   const handleSendToViewSync = (image: FileData) => {
@@ -431,7 +502,7 @@ const App: React.FC = () => {
                 <PaymentPage 
                     plan={selectedPlan}
                     user={session.user}
-                    onBack={() => setView('app')}
+                    onBack={handlePaymentBack}
                     onSuccess={handlePaymentSuccess}
                 />
             </div>
@@ -441,8 +512,8 @@ const App: React.FC = () => {
     if (view === 'homepage') {
         return (
             <Homepage 
-                onStart={() => setView('app')} 
-                onAuthNavigate={() => setView('app')} 
+                onStart={() => { setView('app'); window.history.pushState({}, '', '/'); }} 
+                onAuthNavigate={() => { setView('app'); window.history.pushState({}, '', '/'); }} 
                 session={session} 
                 onGoToGallery={handleOpenGallery}
                 onUpgrade={handleUpgrade}
@@ -492,11 +563,11 @@ const App: React.FC = () => {
   }
 
   if (view === 'auth') {
-    return <AuthPage onGoHome={() => setView('homepage')} initialMode={authMode} />;
+    return <AuthPage onGoHome={() => { setView('homepage'); window.history.pushState({}, '', '/'); }} initialMode={authMode} />;
   }
 
   if (view === 'pricing') {
-      return <PublicPricing onGoHome={() => setView('homepage')} onAuthNavigate={handleAuthNavigate} />;
+      return <PublicPricing onGoHome={() => { setView('homepage'); window.history.pushState({}, '', '/'); }} onAuthNavigate={handleAuthNavigate} />;
   }
   
   return <Homepage onStart={handleStartDesigning} onAuthNavigate={handleAuthNavigate} onNavigateToPricing={() => setView('pricing')} />;

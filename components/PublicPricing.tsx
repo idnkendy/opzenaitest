@@ -2,6 +2,7 @@
 import React from 'react';
 import { PricingPlan } from '../types';
 import { Logo } from './common/Logo';
+import { plans } from '../constants/plans';
 
 // --- ICONS ---
 const CheckIcon = () => (
@@ -9,65 +10,6 @@ const CheckIcon = () => (
         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
     </svg>
 );
-
-// --- DATA ---
-const plans: PricingPlan[] = [
-    {
-        id: 'plan_starter',
-        name: 'Starter',
-        price: 299000,
-        currency: 'đ',
-        features: [
-            'Tổng 3,000 Credits',
-            'Gói tiêu chuẩn',
-            'Hạn sử dụng: 1 Tháng',
-            'Truy cập tất cả công cụ AI',
-            'Render tốc độ tiêu chuẩn'
-        ],
-        type: 'subscription',
-        credits: 3000,
-        durationMonths: 1,
-        description: 'Gói trải nghiệm cho người mới bắt đầu.'
-    },
-    {
-        id: 'plan_pro',
-        name: 'Pro',
-        price: 599000,
-        currency: 'đ',
-        features: [
-            'Tổng 7,000 Credits',
-            '(6,000 Gốc + 1,000 Tặng)',
-            'Tăng thêm ~17% Credits',
-            'Hạn sử dụng: 2 Tháng',
-            'Truy cập tất cả công cụ AI',
-            'Render tốc độ cao'
-        ],
-        type: 'subscription',
-        credits: 7000,
-        highlight: true,
-        durationMonths: 2,
-        description: 'Lựa chọn tốt nhất cho Kiến trúc sư & Freelancer.'
-    },
-    {
-        id: 'plan_ultra',
-        name: 'Ultra',
-        price: 1999000,
-        currency: 'đ',
-        features: [
-            'Tổng 25,000 Credits',
-            '(20,000 Gốc + 5,000 Tặng)',
-            'Tăng thêm 25% Credits',
-            'Hạn sử dụng: 3 Tháng',
-            'Chi phí rẻ nhất/credit',
-            'Hỗ trợ ưu tiên 24/7',
-            'Tính năng Early Access'
-        ],
-        type: 'subscription',
-        credits: 25000,
-        durationMonths: 3,
-        description: 'Giải pháp tối ưu cho Studio và Doanh nghiệp.'
-    }
-];
 
 interface PublicPricingProps {
     onGoHome: () => void;
